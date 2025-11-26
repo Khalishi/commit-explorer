@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import GitHubMark from '../assets/github-mark.png'
 import PrimaryButton from '../components/PrimaryButton.vue'
+import TextInput from '../components/TextInput.vue'
 
 const router = useRouter()
 const username = ref('')
@@ -32,8 +33,12 @@ const handleKeyPress = (event: KeyboardEvent) => {
     <!-- Search Input and Button Container -->
     <div class="w-full max-w-md space-y-4">
       <!-- Input Field -->
-      <div class="relative">
-        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+      <TextInput
+        v-model="username"
+        @keypress="handleKeyPress"
+        placeholder="Enter GitHub username..."
+      >
+        <template #icon>
           <svg 
             class="w-5 h-5 text-gray-400" 
             fill="none" 
@@ -47,15 +52,8 @@ const handleKeyPress = (event: KeyboardEvent) => {
               d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
             />
           </svg>
-        </div>
-        <input
-          v-model="username"
-          @keypress="handleKeyPress"
-          type="text"
-          placeholder="Enter GitHub username..."
-          class="w-full pl-12 pr-4 py-4 text-gray-900 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
-      </div>
+        </template>
+      </TextInput>
 
       <!-- Explore Button -->
       <PrimaryButton
