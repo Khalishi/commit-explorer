@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { githubApi } from '../services/githubApi'
-import type { GitHubUser, GitHubRepository, GitHubCommit, GitHubCommitDetail } from '../types/github'
+import type { GitHubUser, GitHubRepository, GitHubCommit, GitHubCommitDetail, FavoriteCommit } from '../types/github'
 import { useFavorites } from '../composables/useFavorites'
 import TextInput from '../components/TextInput.vue'
 import RepositoryItem from '../components/RepositoryItem.vue'
@@ -87,12 +87,40 @@ const selectCommit = async (sha: string) => {
 }
 
 const handleToggleFavorite = (sha: string) => {
-  toggleFavorite(sha)
+  // Find the commit in the commits array to get metadata
+  const commit = commits.value.find(c => c.sha === sha)
+  if (commit && selectedRepo.value) {
+    const message = commit.commit.message.split('\n')[0] || commit.commit.message
+    const favoriteCommit: FavoriteCommit = {
+      sha: commit.sha,
+      username: username.value,
+      repositoryName: selectedRepo.value.name,
+      message: message,
+      date: commit.commit.author.date,
+      authorName: commit.commit.author.name,
+      authorAvatar: commit.author?.avatar_url,
+      html_url: commit.html_url
+    }
+    toggleFavorite(sha, favoriteCommit)
+  } else {
+    toggleFavorite(sha)
+  }
 }
 
 const handleToggleFavoriteForSelectedCommit = () => {
-  if (selectedCommit.value) {
-    handleToggleFavorite(selectedCommit.value.sha)
+  if (selectedCommit.value && selectedRepo.value) {
+    const message = selectedCommit.value.commit.message.split('\n')[0] || selectedCommit.value.commit.message
+    const favoriteCommit: FavoriteCommit = {
+      sha: selectedCommit.value.sha,
+      username: username.value,
+      repositoryName: selectedRepo.value.name,
+      message: message,
+      date: selectedCommit.value.commit.author.date,
+      authorName: selectedCommit.value.commit.author.name,
+      authorAvatar: selectedCommit.value.author?.avatar_url,
+      html_url: selectedCommit.value.html_url
+    }
+    toggleFavorite(selectedCommit.value.sha, favoriteCommit)
   }
 }
 

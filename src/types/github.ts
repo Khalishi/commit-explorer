@@ -79,3 +79,14 @@ export interface GitHubCommitDetail extends GitHubCommit {
   }>
 }
 
+export interface FavoriteCommit {
+  sha: string
+  username: string
+  repositoryName: string
+  message: string
+  date: string
+  authorName: string
+  authorAvatar?: string
+  html_url: string
+}
+
