@@ -25,7 +25,6 @@ const handleClose = () => {
 const handleCommitClick = (commit: FavoriteCommit) => {
   router.push(`/repos/${commit.username}`)
   handleClose()
-  // TODO: Navigate to specific commit view
 }
 
 const handleRemoveFavorite = (sha: string) => {
