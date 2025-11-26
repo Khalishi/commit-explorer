@@ -11,8 +11,7 @@ const username = ref('')
 const handleExplore = () => {
   if (username.value.trim()) {
     // Navigate to repositories page with username
-    // For now, we'll just log it - you can update this route later
-    router.push(`/user/${username.value.trim()}`)
+    router.push(`/repos/${username.value.trim()}`)
   }
 }
 
