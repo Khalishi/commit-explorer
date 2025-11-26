@@ -1,6 +1,6 @@
 import axios from 'axios'
 import type { AxiosInstance } from 'axios'
-import type { GitHubRepository, GitHubCommit, GitHubCommitDetail } from '../types/github'
+import type { GitHubUser, GitHubRepository, GitHubCommit, GitHubCommitDetail } from '../types/github'
 
 // Create axios instance with base configuration
 const apiClient: AxiosInstance = axios.create({
@@ -12,6 +12,28 @@ const apiClient: AxiosInstance = axios.create({
 
 // GitHub API Service
 export const githubApi = {
+  /**
+   * Fetch user profile information
+   * @param username - GitHub username
+   * @returns Promise with user profile
+   */
+  async getUser(username: string): Promise<GitHubUser> {
+    try {
+      const response = await apiClient.get<GitHubUser>(`/users/${username}`)
+      return response.data
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 404) {
+          throw new Error(`User "${username}" not found`)
+        }
+        throw new Error(
+          error.response?.data?.message || 'Failed to fetch user profile'
+        )
+      }
+      throw error
+    }
+  },
+
   /**
    * Fetch repositories for a GitHub user
    * @param username - GitHub username
