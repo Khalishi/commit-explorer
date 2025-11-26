@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { defineProps, defineEmits } from 'vue'
+import { defineEmits } from 'vue'
 import type { GitHubCommitDetail } from '../types/github'
 import SecondaryButton from './SecondaryButton.vue'
 
-const props = defineProps<{
+defineProps<{
   selectedCommit: GitHubCommitDetail | null
   loadingCommitDetails: boolean
 }>()
