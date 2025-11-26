@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import GitHubMark from '../assets/github-mark.png'
+import PrimaryButton from '../components/PrimaryButton.vue'
 
 const router = useRouter()
 const username = ref('')
@@ -57,13 +58,12 @@ const handleKeyPress = (event: KeyboardEvent) => {
       </div>
 
       <!-- Explore Button -->
-      <button
+      <PrimaryButton
         @click="handleExplore"
         :disabled="!username.trim()"
-        class="w-full py-4 px-6 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Explore Repositories
-      </button>
+      </PrimaryButton>
     </div>
   </div>
 </template>
