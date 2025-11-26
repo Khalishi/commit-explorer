@@ -1,17 +1,19 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { githubApi } from '../services/githubApi'
-import type { GitHubCommit, GitHubCommitDetail } from '../types/github'
+import type { GitHubCommit } from '../types/github'
 
 const props = defineProps<{
   username: string
   repositoryName: string | null
   selectedCommitSha?: string | null
+  isFavorite?: (sha: string) => boolean
 }>()
 
 const emit = defineEmits<{
   commitSelected: [sha: string]
   commitsLoaded: [commits: GitHubCommit[]]
+  toggleFavorite: [sha: string]
 }>()
 
 const commits = ref<GitHubCommit[]>([])
@@ -52,6 +54,11 @@ const fetchCommits = async () => {
 
 const handleCommitClick = (sha: string) => {
   emit('commitSelected', sha)
+}
+
+const handleToggleFavorite = (event: MouseEvent, sha: string) => {
+  event.stopPropagation()
+  emit('toggleFavorite', sha)
 }
 
 // Watch for repository changes
@@ -97,10 +104,16 @@ watch(() => props.repositoryName, () => {
             <div class="flex items-center gap-2 mb-1">
               <span class="font-mono text-sm text-gray-600">{{ getShortSha(commit.sha) }}</span>
               <button
-                v-if="selectedCommitSha === commit.sha"
-                class="text-gray-400 hover:text-gray-600"
+                @click="handleToggleFavorite($event, commit.sha)"
+                :class="[
+                  'transition-colors',
+                  isFavorite && isFavorite(commit.sha)
+                    ? 'text-yellow-500 hover:text-yellow-600'
+                    : 'text-gray-400 hover:text-yellow-500'
+                ]"
+                :title="isFavorite && isFavorite(commit.sha) ? 'Remove from favorites' : 'Add to favorites'"
               >
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <svg class="w-4 h-4" :fill="isFavorite && isFavorite(commit.sha) ? 'currentColor' : 'none'" stroke="currentColor" viewBox="0 0 20 20">
                   <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                 </svg>
               </button>

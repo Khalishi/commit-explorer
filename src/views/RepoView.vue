@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { githubApi } from '../services/githubApi'
 import type { GitHubUser, GitHubRepository, GitHubCommit, GitHubCommitDetail } from '../types/github'
+import { useFavorites } from '../composables/useFavorites'
 import TextInput from '../components/TextInput.vue'
 import RepositoryItem from '../components/RepositoryItem.vue'
 import CommitHistory from '../components/CommitHistory.vue'
@@ -11,6 +12,9 @@ import CommitDetails from '../components/CommitDetails.vue'
 const route = useRoute()
 const router = useRouter()
 const username = ref<string>(route.params.username as string)
+
+// Favorites
+const { isFavorite, toggleFavorite } = useFavorites()
 
 // State
 const user = ref<GitHubUser | null>(null)
@@ -79,6 +83,16 @@ const selectCommit = async (sha: string) => {
     error.value = err instanceof Error ? err.message : 'Failed to fetch commit details'
   } finally {
     loadingCommitDetails.value = false
+  }
+}
+
+const handleToggleFavorite = (sha: string) => {
+  toggleFavorite(sha)
+}
+
+const handleToggleFavoriteForSelectedCommit = () => {
+  if (selectedCommit.value) {
+    handleToggleFavorite(selectedCommit.value.sha)
   }
 }
 
@@ -186,15 +200,19 @@ onMounted(async () => {
         :username="username"
         :repository-name="selectedRepo?.name || null"
         :selected-commit-sha="selectedCommit?.sha || null"
+        :is-favorite="(sha: string) => isFavorite(sha)"
         @commit-selected="selectCommit"
         @commits-loaded="handleCommitsLoaded"
+        @toggle-favorite="handleToggleFavorite"
       />
 
       <!-- Right Panel: Commit Details -->
       <CommitDetails
         :selected-commit="selectedCommit"
         :loading-commit-details="loadingCommitDetails"
+        :is-favorite="selectedCommit ? isFavorite(selectedCommit.sha) : false"
         @go-back="goBack"
+        @toggle-favorite="handleToggleFavoriteForSelectedCommit"
       />
     </div>
   </div>
