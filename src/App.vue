@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { RouterView } from 'vue-router'
 import SecondaryButton from './components/SecondaryButton.vue'
+import GitHubLogo from './assets/GitHub_Logo.png'
 
 const isSidebarOpen = ref(false)
 
@@ -23,9 +24,7 @@ const closeSidebar = () => {
         <div class="flex items-center justify-between">
           <!-- Logo -->
           <div class="flex items-center gap-3">
-            <h1 class="text-2xl font-bold text-gray-800">
-              GitExplorer
-            </h1>
+            <img :src="GitHubLogo" alt="GitHub Logo" class="h-8 w-auto" />
           </div>
 
           <!-- Favourites Button -->
