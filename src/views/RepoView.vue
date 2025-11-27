@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { githubApi } from '../services/githubApi'
 import type { GitHubUser, GitHubRepository, GitHubCommit, GitHubCommitDetail } from '../types/github'
@@ -23,6 +23,7 @@ const loading = ref<boolean>(true)
 const loadingCommitDetails = ref<boolean>(false)
 const error = ref<string | null>(null)
 const mobileView = ref<'repos' | 'commits' | 'details'>('repos')
+const isDesktop = ref<boolean>(typeof window !== 'undefined' ? window.innerWidth >= 1024 : false)
 
 // Computed
 const filteredRepos = computed(() => {
@@ -57,12 +58,14 @@ const selectRepository = async (repo: GitHubRepository) => {
   selectedRepo.value = repo
   selectedCommit.value = null
   commits.value = []
-  mobileView.value = 'commits'
+  if (!isDesktop.value) {
+    mobileView.value = 'commits'
+  }
 }
 
 const handleCommitsLoaded = (loadedCommits: GitHubCommit[]) => {
   commits.value = loadedCommits
-  if (commits.value.length > 0 && commits.value[0]) {
+  if (isDesktop.value && commits.value.length > 0 && commits.value[0]) {
     selectCommit(commits.value[0].sha)
   }
 }
@@ -77,7 +80,9 @@ const selectCommit = async (sha: string) => {
       selectedRepo.value.name,
       sha
     )
-    mobileView.value = 'details'
+    if (!isDesktop.value) {
+      mobileView.value = 'details'
+    }
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to fetch commit details'
   } finally {
@@ -117,6 +122,18 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+})
+
+const handleResize = () => {
+  isDesktop.value = window.innerWidth >= 1024
+}
+
+onMounted(() => {
+  window.addEventListener('resize', handleResize)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
 })
 </script>
 
