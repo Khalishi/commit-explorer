@@ -8,7 +8,7 @@ import RepositoryItem from '../components/RepositoryItem.vue'
 import CommitHistory from '../components/CommitHistory.vue'
 import CommitDetails from '../components/CommitDetails.vue'
 import UserProfileCard from '../components/UserProfileCard.vue'
-import { useFavorites } from '../composables/useFavorites'
+import { useFavorites } from '../stores/useFavorites'
 import { useRepoStore } from '../stores/repoStore'
 
 type MobileView = 'repos' | 'commits' | 'details'
@@ -30,7 +30,8 @@ const {
 } = storeToRefs(repoStore)
 const mobileView = ref<MobileView>('repos')
 const isDesktop = ref<boolean>(typeof window !== 'undefined' ? window.innerWidth >= 1024 : false)
-const { isFavorite, toggleFavorite } = useFavorites()
+const favoritesStore = useFavorites()
+const isFavorite = (sha: string) => favoritesStore.isFavorite(sha)
 
 const initializeForUsername = async (usernameParam: unknown) => {
   if (typeof usernameParam !== 'string' || !usernameParam.trim()) {
@@ -94,14 +95,14 @@ const buildFavoriteCommitPayload = (sha: string): FavoriteCommit | null => {
 }
 
 const handleToggleFavorite = (sha: string) => {
-  if (isFavorite(sha)) {
-    toggleFavorite(sha)
+  if (favoritesStore.isFavorite(sha)) {
+    favoritesStore.toggleFavorite(sha)
     return
   }
 
   const payload = buildFavoriteCommitPayload(sha)
   if (payload) {
-    toggleFavorite(sha, payload)
+    favoritesStore.toggleFavorite(sha, payload)
   }
 }
 

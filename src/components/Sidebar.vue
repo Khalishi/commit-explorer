@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useFavorites } from '../composables/useFavorites'
+import { useFavorites } from '../stores/useFavorites'
 import type { FavoriteCommit } from '../types/github'
 import FavoriteCommitsList from './FavoriteCommitsList.vue'
 
@@ -14,9 +14,9 @@ const emit = defineEmits<{
 }>()
 
 const router = useRouter()
-const { getAllFavoriteCommits, removeFavorite } = useFavorites()
+const favoritesStore = useFavorites()
 
-const favoriteCommits = computed(() => getAllFavoriteCommits())
+const favoriteCommits = computed(() => favoritesStore.getAllFavoriteCommits)
 
 const handleClose = () => {
   emit('close')
@@ -28,7 +28,7 @@ const handleCommitClick = (commit: FavoriteCommit) => {
 }
 
 const handleRemoveFavorite = (sha: string) => {
-  removeFavorite(sha)
+  favoritesStore.removeFavorite(sha)
 }
 </script>
 
