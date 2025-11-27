@@ -22,6 +22,7 @@ const selectedCommit = ref<GitHubCommitDetail | null>(null)
 const loading = ref<boolean>(true)
 const loadingCommitDetails = ref<boolean>(false)
 const error = ref<string | null>(null)
+const mobileView = ref<'repos' | 'commits' | 'details'>('repos')
 
 // Computed
 const filteredRepos = computed(() => {
@@ -56,6 +57,7 @@ const selectRepository = async (repo: GitHubRepository) => {
   selectedRepo.value = repo
   selectedCommit.value = null
   commits.value = []
+  mobileView.value = 'commits'
 }
 
 const handleCommitsLoaded = (loadedCommits: GitHubCommit[]) => {
@@ -75,11 +77,24 @@ const selectCommit = async (sha: string) => {
       selectedRepo.value.name,
       sha
     )
+    mobileView.value = 'details'
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to fetch commit details'
   } finally {
     loadingCommitDetails.value = false
   }
+}
+
+const goBackToRepos = () => {
+  mobileView.value = 'repos'
+  selectedRepo.value = null
+  selectedCommit.value = null
+  commits.value = []
+}
+
+const goBackToCommits = () => {
+  mobileView.value = 'commits'
+  selectedCommit.value = null
 }
 
 const goBack = () => {
@@ -92,7 +107,9 @@ onMounted(async () => {
   error.value = null
   try {
     await Promise.all([fetchUser(), fetchRepositories()])
-    if (repositories.value.length > 0 && repositories.value[0]) {
+    // Only auto-select on desktop (lg breakpoint and above)
+    // On mobile, user should manually select a repo
+    if (window.innerWidth >= 1024 && repositories.value.length > 0 && repositories.value[0]) {
       selectRepository(repositories.value[0])
     }
   } catch (err) {
@@ -124,78 +141,162 @@ onMounted(async () => {
 
     <!-- Main Content -->
     <div v-else-if="user" class="flex h-screen overflow-hidden">
-      <!-- Left Panel: User Profile & Repositories -->
-      <div class="w-80 bg-white border-r border-gray-200 flex flex-col overflow-hidden">
-        <!-- User Profile Card -->
-        <div class="p-6 border-b border-gray-200">
-          <div class="flex items-center gap-4 mb-4">
-            <img 
-              :src="user.avatar_url" 
-              :alt="user.login"
-              class="w-16 h-16 rounded-full"
-            />
-            <div>
-              <h2 class="text-lg font-semibold text-gray-900">{{ user.name || user.login }}</h2>
-              <p class="text-sm text-gray-500">@{{ user.login }}</p>
+      <!-- Desktop Layout: All panels side by side -->
+      <div class="hidden lg:flex flex-1 h-full">
+        <!-- Left Panel: User Profile & Repositories -->
+        <div class="w-80 bg-white border-r border-gray-200 flex flex-col overflow-hidden">
+          <!-- User Profile Card -->
+          <div class="p-6 border-b border-gray-200">
+            <div class="flex items-center gap-4 mb-4">
+              <img 
+                :src="user.avatar_url" 
+                :alt="user.login"
+                class="w-16 h-16 rounded-full"
+              />
+              <div>
+                <h2 class="text-lg font-semibold text-gray-900">{{ user.name || user.login }}</h2>
+                <p class="text-sm text-gray-500">@{{ user.login }}</p>
+              </div>
+            </div>
+            <div class="flex gap-4 text-sm text-gray-600">
+              <span>{{ user.followers }} followers</span>
+              <span>{{ user.public_repos }} repos</span>
             </div>
           </div>
-          <div class="flex gap-4 text-sm text-gray-600">
-            <span>{{ user.followers }} followers</span>
-            <span>{{ user.public_repos }} repos</span>
+
+          <!-- Search Bar -->
+          <div class="p-4 border-b border-gray-200">
+            <TextInput
+              v-model="searchQuery"
+              placeholder="Find a repository..."
+            >
+            <template #icon>
+            <svg 
+              class="w-5 h-5 text-gray-400" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                stroke-linecap="round" 
+                stroke-linejoin="round" 
+                stroke-width="2" 
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+          </template>
+          </TextInput>
+          </div>
+
+          <!-- Repositories List -->
+          <div class="flex-1 overflow-y-auto">
+            <RepositoryItem
+              v-for="repo in filteredRepos"
+              :key="repo.id"
+              :repository="repo"
+              :is-selected="selectedRepo?.id === repo.id"
+              @select="selectRepository"
+            />
           </div>
         </div>
 
-        <!-- Search Bar -->
-        <div class="p-4 border-b border-gray-200">
-          <TextInput
-            v-model="searchQuery"
-            placeholder="Find a repository..."
-          >
-          <template #icon>
-          <svg 
-            class="w-5 h-5 text-gray-400" 
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-          >
-            <path 
-              stroke-linecap="round" 
-              stroke-linejoin="round" 
-              stroke-width="2" 
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+        <!-- Middle Panel: Commit History -->
+        <CommitHistory
+          :username="username"
+          :repository-name="selectedRepo?.name || null"
+          :selected-commit-sha="selectedCommit?.sha || null"
+          @commit-selected="selectCommit"
+          @commits-loaded="handleCommitsLoaded"
+        />
+
+        <!-- Right Panel: Commit Details -->
+        <CommitDetails
+          :selected-commit="selectedCommit"
+          :loading-commit-details="loadingCommitDetails"
+          @go-back="goBack"
+        />
+      </div>
+
+      <!-- Mobile Layout: One view at a time -->
+      <div class="lg:hidden flex-1 h-full overflow-hidden">
+        <!-- Repositories View -->
+        <div v-if="mobileView === 'repos'" class="h-full bg-white flex flex-col overflow-hidden">
+          <!-- User Profile Card -->
+          <div class="p-4 border-b border-gray-200">
+            <div class="flex items-center gap-3 mb-3">
+              <img 
+                :src="user.avatar_url" 
+                :alt="user.login"
+                class="w-12 h-12 rounded-full"
+              />
+              <div>
+                <h2 class="text-base font-semibold text-gray-900">{{ user.name || user.login }}</h2>
+                <p class="text-xs text-gray-500">@{{ user.login }}</p>
+              </div>
+            </div>
+            <div class="flex gap-3 text-xs text-gray-600">
+              <span>{{ user.followers }} followers</span>
+              <span>{{ user.public_repos }} repos</span>
+            </div>
+          </div>
+
+          <!-- Search Bar -->
+          <div class="p-3 border-b border-gray-200">
+            <TextInput
+              v-model="searchQuery"
+              placeholder="Find a repository..."
+            >
+            <template #icon>
+            <svg 
+              class="w-5 h-5 text-gray-400" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                stroke-linecap="round" 
+                stroke-linejoin="round" 
+                stroke-width="2" 
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+          </template>
+          </TextInput>
+          </div>
+
+          <!-- Repositories List -->
+          <div class="flex-1 overflow-y-auto">
+            <RepositoryItem
+              v-for="repo in filteredRepos"
+              :key="repo.id"
+              :repository="repo"
+              :is-selected="selectedRepo?.id === repo.id"
+              @select="selectRepository"
             />
-          </svg>
-        </template>
-        </TextInput>
+          </div>
         </div>
 
-        <!-- Repositories List -->
-        <div class="flex-1 overflow-y-auto">
-          <RepositoryItem
-            v-for="repo in filteredRepos"
-            :key="repo.id"
-            :repository="repo"
-            :is-selected="selectedRepo?.id === repo.id"
-            @select="selectRepository"
+        <!-- Commits View -->
+        <div v-else-if="mobileView === 'commits'" class="h-full">
+          <CommitHistory
+            :username="username"
+            :repository-name="selectedRepo?.name || null"
+            :selected-commit-sha="selectedCommit?.sha || null"
+            @commit-selected="selectCommit"
+            @commits-loaded="handleCommitsLoaded"
+            @go-back="goBackToRepos"
+          />
+        </div>
+
+        <!-- Commit Details View -->
+        <div v-else-if="mobileView === 'details'" class="h-full">
+          <CommitDetails
+            :selected-commit="selectedCommit"
+            :loading-commit-details="loadingCommitDetails"
+            @go-back="goBackToCommits"
           />
         </div>
       </div>
-
-      <!-- Middle Panel: Commit History -->
-      <CommitHistory
-        :username="username"
-        :repository-name="selectedRepo?.name || null"
-        :selected-commit-sha="selectedCommit?.sha || null"
-        @commit-selected="selectCommit"
-        @commits-loaded="handleCommitsLoaded"
-      />
-
-      <!-- Right Panel: Commit Details -->
-      <CommitDetails
-        :selected-commit="selectedCommit"
-        :loading-commit-details="loadingCommitDetails"
-        @go-back="goBack"
-      />
     </div>
   </div>
 </template>

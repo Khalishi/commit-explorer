@@ -38,28 +38,29 @@ const handleToggleFavorite = () => {
 </script>
 
 <template>
-  <div class="w-96 bg-white flex flex-col overflow-hidden">
-    <div class="p-4 border-b border-gray-200">
-      <SecondaryButton @click="handleGoBack" class="mb-4">
+  <div class="w-full lg:w-96 bg-white flex flex-col overflow-hidden">
+    <div class="p-3 lg:p-4 border-b border-gray-200">
+      <SecondaryButton @click="handleGoBack" class="mb-3 lg:mb-4">
         <template #icon>
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
           </svg>
         </template>
-        Back
+        <span class="lg:hidden">Back to Commits</span>
+        <span class="hidden lg:inline">Back</span>
       </SecondaryButton>
       <div class="flex items-center justify-between gap-2">
-        <h2 class="text-lg font-semibold text-gray-900 flex-1">
+        <h2 class="text-base lg:text-lg font-semibold text-gray-900 flex-1 line-clamp-2">
           {{ selectedCommit?.commit.message.split('\n')[0] || 'Select a commit' }}
         </h2>
         <button
           v-if="selectedCommit"
           @click="handleToggleFavorite"
           :class="[
-            'p-2 rounded-lg transition-colors',
+            'p-2 rounded-lg transition-colors touch-manipulation flex-shrink-0',
             isFavorite
-              ? 'text-yellow-500 hover:bg-yellow-50'
-              : 'text-gray-400 hover:bg-gray-100 hover:text-yellow-500'
+              ? 'text-yellow-500 hover:bg-yellow-50 active:bg-yellow-100'
+              : 'text-gray-400 hover:bg-gray-100 hover:text-yellow-500 active:bg-gray-200'
           ]"
           :title="isFavorite ? 'Remove from favorites' : 'Add to favorites'"
         >
@@ -70,9 +71,9 @@ const handleToggleFavorite = () => {
       </div>
     </div>
 
-    <div class="flex-1 overflow-y-auto p-4">
+    <div class="flex-1 overflow-y-auto p-3 lg:p-4">
       <div v-if="loadingCommitDetails" class="flex items-center justify-center py-12">
-        <div class="text-gray-500">Loading commit details...</div>
+        <div class="text-gray-500 text-sm lg:text-base">Loading commit details...</div>
       </div>
       <div v-else-if="selectedCommit" class="space-y-4">
         <!-- Commit Author & Date -->
@@ -81,16 +82,16 @@ const handleToggleFavorite = () => {
             v-if="selectedCommit.author"
             :src="selectedCommit.author.avatar_url"
             :alt="selectedCommit.commit.author.name"
-            class="w-10 h-10 rounded-full"
+            class="w-10 h-10 rounded-full flex-shrink-0"
           />
-          <div>
-            <p class="font-semibold text-gray-900">{{ selectedCommit.commit.author.name }}</p>
-            <p class="text-sm text-gray-500">{{ formatDateTime(selectedCommit.commit.author.date) }}</p>
+          <div class="min-w-0 flex-1">
+            <p class="font-semibold text-sm lg:text-base text-gray-900 truncate">{{ selectedCommit.commit.author.name }}</p>
+            <p class="text-xs lg:text-sm text-gray-500">{{ formatDateTime(selectedCommit.commit.author.date) }}</p>
           </div>
         </div>
 
         <!-- Commit Stats -->
-        <div class="flex items-center gap-4 text-sm">
+        <div class="flex items-center gap-3 lg:gap-4 text-xs lg:text-sm flex-wrap">
           <span class="text-green-600 font-semibold">+ {{ selectedCommit.stats.additions }} additions</span>
           <span class="text-red-600 font-semibold">{{ selectedCommit.stats.deletions }} deletions</span>
           <span class="text-gray-500 font-mono">{{ getShortSha(selectedCommit.sha) }}</span>
@@ -98,17 +99,17 @@ const handleToggleFavorite = () => {
 
         <!-- Changed Files -->
         <div v-if="selectedCommit.files && selectedCommit.files.length > 0">
-          <h3 class="font-semibold text-gray-900 mb-3">
+          <h3 class="font-semibold text-sm lg:text-base text-gray-900 mb-3">
             CHANGED FILES ({{ selectedCommit.files.length }})
           </h3>
           <div class="space-y-2">
             <div
               v-for="file in selectedCommit.files"
               :key="file.filename"
-              class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+              class="flex items-center justify-between p-2 lg:p-3 bg-gray-50 rounded-lg border border-gray-200 gap-2"
             >
-              <span class="text-sm font-medium text-gray-900">{{ file.filename }}</span>
-              <div class="flex items-center gap-2 text-sm">
+              <span class="text-xs lg:text-sm font-medium text-gray-900 truncate min-w-0 flex-1">{{ file.filename }}</span>
+              <div class="flex items-center gap-2 text-xs lg:text-sm flex-shrink-0">
                 <span class="text-green-600">+{{ file.additions }}</span>
                 <span class="text-red-600">-{{ file.deletions }}</span>
               </div>
@@ -117,7 +118,7 @@ const handleToggleFavorite = () => {
         </div>
       </div>
       <div v-else class="flex items-center justify-center py-12 text-gray-500">
-        <p>Select a commit to view details</p>
+        <p class="text-sm lg:text-base">Select a commit to view details</p>
       </div>
     </div>
   </div>

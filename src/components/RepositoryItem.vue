@@ -23,7 +23,7 @@ const formatDate = (dateString: string) => {
   <div
     @click="$emit('select', repository)"
     :class="[
-      'p-4 border-b border-gray-100 cursor-pointer transition-colors',
+      'p-4 border-b border-gray-100 cursor-pointer transition-colors touch-manipulation active:bg-gray-100',
       isSelected ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50'
     ]"
   >
