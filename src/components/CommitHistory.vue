@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { githubApi } from '../services/githubApi'
 import type { GitHubCommit } from '../types/github'
 
@@ -19,6 +19,7 @@ const emit = defineEmits<{
 const commits = ref<GitHubCommit[]>([])
 const loading = ref<boolean>(false)
 const error = ref<string | null>(null)
+const sortOrder = ref<'asc' | 'desc'>('desc')
 
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('en-US', {
@@ -30,6 +31,19 @@ const formatDate = (dateString: string) => {
 
 const getShortSha = (sha: string) => {
   return sha.substring(0, 7)
+}
+
+const sortedCommits = computed(() => {
+  const sorted = [...commits.value].sort((a, b) => {
+    const dateA = new Date(a.commit.author.date).getTime()
+    const dateB = new Date(b.commit.author.date).getTime()
+    return sortOrder.value === 'asc' ? dateA - dateB : dateB - dateA
+  })
+  return sorted
+})
+
+const toggleSortOrder = () => {
+  sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
 }
 
 const fetchCommits = async () => {
@@ -69,10 +83,27 @@ watch(() => props.repositoryName, () => {
 
 <template>
   <div class="flex-1 bg-white border-r border-gray-200 flex flex-col overflow-hidden">
-    <div class="p-4 border-b border-gray-200">
+    <div class="p-4 border-b border-gray-200 flex items-center justify-between">
       <h2 class="text-lg font-semibold text-gray-900">
         {{ repositoryName || 'Select a repository' }} commits
       </h2>
+      <button
+        v-if="commits.length > 0"
+        @click="toggleSortOrder"
+        class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+        :title="sortOrder === 'asc' ? 'Sort descending (newest first)' : 'Sort ascending (oldest first)'"
+      >
+        <svg 
+          class="w-4 h-4" 
+          :class="sortOrder === 'asc' ? 'rotate-180' : ''"
+          fill="none" 
+          stroke="currentColor" 
+          viewBox="0 0 24 24"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+        </svg>
+        <span>{{ sortOrder === 'asc' ? 'Old' : 'New' }}</span>
+      </button>
     </div>
     
     <div class="flex-1 overflow-y-auto p-4">
@@ -90,7 +121,7 @@ watch(() => props.repositoryName, () => {
         <div class="relative">
           <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-blue-200"></div>
           <div
-            v-for="commit in commits"
+            v-for="commit in sortedCommits"
             :key="commit.sha"
             @click="handleCommitClick(commit.sha)"
             :class="[
