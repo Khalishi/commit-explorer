@@ -1,75 +1,69 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { githubApi } from '../services/githubApi'
-import type { GitHubUser, GitHubRepository, GitHubCommit, GitHubCommitDetail, FavoriteCommit } from '../types/github'
+import { storeToRefs } from 'pinia'
+import type { GitHubRepository, GitHubCommit, FavoriteCommit } from '../types/github'
 import TextInput from '../components/TextInput.vue'
 import RepositoryItem from '../components/RepositoryItem.vue'
 import CommitHistory from '../components/CommitHistory.vue'
 import CommitDetails from '../components/CommitDetails.vue'
 import UserProfileCard from '../components/UserProfileCard.vue'
 import { useFavorites } from '../composables/useFavorites'
+import { useRepoStore } from '../stores/repoStore'
+
+type MobileView = 'repos' | 'commits' | 'details'
 
 const route = useRoute()
 const router = useRouter()
-const username = ref<string>(route.params.username as string)
-
-// State
-const user = ref<GitHubUser | null>(null)
-const repositories = ref<GitHubRepository[]>([])
-const searchQuery = ref<string>('')
-const selectedRepo = ref<GitHubRepository | null>(null)
-const commits = ref<GitHubCommit[]>([])
-const selectedCommit = ref<GitHubCommitDetail | null>(null)
-const loading = ref<boolean>(true)
-const loadingCommitDetails = ref<boolean>(false)
-const error = ref<string | null>(null)
-const mobileView = ref<'repos' | 'commits' | 'details'>('repos')
+const repoStore = useRepoStore()
+const {
+  username,
+  user,
+  searchQuery,
+  selectedRepo,
+  selectedCommit,
+  commits,
+  loading,
+  loadingCommitDetails,
+  error,
+  filteredRepos,
+} = storeToRefs(repoStore)
+const mobileView = ref<MobileView>('repos')
 const isDesktop = ref<boolean>(typeof window !== 'undefined' ? window.innerWidth >= 1024 : false)
 const { isFavorite, toggleFavorite } = useFavorites()
 
-// Computed
-const filteredRepos = computed(() => {
-  if (!searchQuery.value.trim()) {
-    return repositories.value
+const initializeForUsername = async (usernameParam: unknown) => {
+  if (typeof usernameParam !== 'string' || !usernameParam.trim()) {
+    repoStore.clearSelection()
+    return
   }
-  const query = searchQuery.value.toLowerCase()
-  return repositories.value.filter(repo => 
-    repo.name.toLowerCase().includes(query) ||
-    (repo.description && repo.description.toLowerCase().includes(query))
-  )
-})
 
-// Methods
-const fetchUser = async () => {
-  try {
-    user.value = await githubApi.getUser(username.value)
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to fetch user profile'
-  }
+  repoStore.$reset()
+  await repoStore.initialize(usernameParam, isDesktop.value)
+  mobileView.value = 'repos'
 }
 
-const fetchRepositories = async () => {
-  try {
-    repositories.value = await githubApi.getRepositories(username.value)
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to fetch repositories'
-  }
-}
-
-const selectRepository = async (repo: GitHubRepository) => {
-  selectedRepo.value = repo
-  selectedCommit.value = null
-  commits.value = []
+const handleSelectRepository = (repo: GitHubRepository) => {
+  repoStore.selectRepository(repo)
   if (!isDesktop.value) {
     mobileView.value = 'commits'
   }
 }
 
+const handleSelectCommit = async (sha: string) => {
+  await repoStore.selectCommit(sha)
+  if (!isDesktop.value) {
+    mobileView.value = 'details'
+  }
+}
+
 const handleCommitsLoaded = (loadedCommits: GitHubCommit[]) => {
-  commits.value = loadedCommits
-  if (isDesktop.value && commits.value.length > 0 && commits.value[0]) {
-    selectCommit(commits.value[0].sha)
+  repoStore.setCommits(loadedCommits)
+  if (isDesktop.value && loadedCommits.length > 0) {
+    const [firstCommit] = loadedCommits
+    if (firstCommit) {
+      void handleSelectCommit(firstCommit.sha)
+    }
   }
 }
 
@@ -116,71 +110,59 @@ const handleToggleFavoriteFromDetails = () => {
   handleToggleFavorite(selectedCommit.value.sha)
 }
 
-const selectCommit = async (sha: string) => {
-  if (!selectedRepo.value) return
-  
-  loadingCommitDetails.value = true
-  try {
-    selectedCommit.value = await githubApi.getCommitDetails(
-      username.value,
-      selectedRepo.value.name,
-      sha
-    )
-    if (!isDesktop.value) {
-      mobileView.value = 'details'
-    }
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to fetch commit details'
-  } finally {
-    loadingCommitDetails.value = false
-  }
-}
-
 const goBackToRepos = () => {
   mobileView.value = 'repos'
-  selectedRepo.value = null
-  selectedCommit.value = null
-  commits.value = []
+  repoStore.clearSelection()
 }
 
 const goBackToCommits = () => {
   mobileView.value = 'commits'
-  selectedCommit.value = null
+  repoStore.clearSelectedCommit()
 }
 
 const goBack = () => {
   router.push('/')
 }
 
-// Lifecycle
-onMounted(async () => {
-  loading.value = true
-  error.value = null
-  try {
-    await Promise.all([fetchUser(), fetchRepositories()])
-    // Only auto-select on desktop (lg breakpoint and above)
-    // On mobile, user should manually select a repo
-    if (window.innerWidth >= 1024 && repositories.value.length > 0 && repositories.value[0]) {
-      selectRepository(repositories.value[0])
-    }
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to load data'
-  } finally {
-    loading.value = false
-  }
-})
-
 const handleResize = () => {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  const wasDesktop = isDesktop.value
   isDesktop.value = window.innerWidth >= 1024
+
+  if (isDesktop.value) {
+    mobileView.value = 'repos'
+    if (!wasDesktop && !selectedRepo.value && filteredRepos.value.length > 0) {
+      const firstRepo = filteredRepos.value[0]
+      if (firstRepo) {
+        repoStore.selectRepository(firstRepo)
+      }
+    }
+  }
 }
 
 onMounted(() => {
-  window.addEventListener('resize', handleResize)
+  void initializeForUsername(route.params.username)
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', handleResize)
+  }
 })
 
 onUnmounted(() => {
-  window.removeEventListener('resize', handleResize)
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('resize', handleResize)
+  }
+  repoStore.$reset()
 })
+
+watch(
+  () => route.params.username,
+  newUsername => {
+    void initializeForUsername(newUsername)
+  }
+)
 </script>
 
 <template>
@@ -242,7 +224,7 @@ onUnmounted(() => {
               :key="repo.id"
               :repository="repo"
               :is-selected="selectedRepo?.id === repo.id"
-              @select="selectRepository"
+              @select="handleSelectRepository"
             />
           </div>
         </div>
@@ -253,7 +235,7 @@ onUnmounted(() => {
           :repository-name="selectedRepo?.name || null"
           :selected-commit-sha="selectedCommit?.sha || null"
           :is-favorite="isFavorite"
-          @commit-selected="selectCommit"
+          @commit-selected="handleSelectCommit"
           @commits-loaded="handleCommitsLoaded"
           @toggle-favorite="handleToggleFavorite"
         />
@@ -306,7 +288,7 @@ onUnmounted(() => {
               :key="repo.id"
               :repository="repo"
               :is-selected="selectedRepo?.id === repo.id"
-              @select="selectRepository"
+              @select="handleSelectRepository"
             />
           </div>
         </div>
@@ -318,7 +300,7 @@ onUnmounted(() => {
             :repository-name="selectedRepo?.name || null"
             :selected-commit-sha="selectedCommit?.sha || null"
             :is-favorite="isFavorite"
-            @commit-selected="selectCommit"
+            @commit-selected="handleSelectCommit"
             @commits-loaded="handleCommitsLoaded"
             @toggle-favorite="handleToggleFavorite"
             @go-back="goBackToRepos"
