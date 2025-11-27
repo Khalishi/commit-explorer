@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { RouterView } from 'vue-router'
+import { RouterView, RouterLink } from 'vue-router'
 import SecondaryButton from './components/SecondaryButton.vue'
 import Sidebar from './components/Sidebar.vue'
 import GitHubLogo from './assets/GitHub_Logo.png'
@@ -24,10 +24,9 @@ const closeSidebar = () => {
       <div class="container mx-auto px-4 py-4">
         <div class="flex items-center justify-between">
           <!-- Logo -->
-          <div class="flex items-center gap-3">
+          <RouterLink to="/" class="flex items-center gap-3" aria-label="Go to home page">
             <img :src="GitHubLogo" alt="GitHub Logo" class="h-8 w-auto" />
-          </div>
-
+          </RouterLink>
           <!-- Favourites Button -->
           <SecondaryButton @click="toggleSidebar">
             <template #icon>
