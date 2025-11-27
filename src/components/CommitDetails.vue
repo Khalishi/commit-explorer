@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { GitHubCommitDetail } from '../types/github'
-import SecondaryButton from './SecondaryButton.vue'
 
 defineProps<{
   selectedCommit: GitHubCommitDetail | null
@@ -9,7 +8,6 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  goBack: []
   toggleFavorite: []
 }>()
 
@@ -28,10 +26,6 @@ const getShortSha = (sha: string) => {
   return sha.substring(0, 7)
 }
 
-const handleGoBack = () => {
-  emit('goBack')
-}
-
 const handleToggleFavorite = () => {
   emit('toggleFavorite')
 }
@@ -40,15 +34,6 @@ const handleToggleFavorite = () => {
 <template>
   <div class="w-full lg:w-96 bg-white flex flex-col overflow-hidden">
     <div class="p-3 lg:p-4 border-b border-gray-200">
-      <SecondaryButton @click="handleGoBack" class="mb-3 lg:mb-4">
-        <template #icon>
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-          </svg>
-        </template>
-        <span class="lg:hidden">Back to Commits</span>
-        <span class="hidden lg:inline">Back</span>
-      </SecondaryButton>
       <div class="flex items-center justify-between gap-2">
         <h2 class="text-base lg:text-lg font-semibold text-gray-900 flex-1 line-clamp-2">
           {{ selectedCommit?.commit.message.split('\n')[0] || 'Select a commit' }}
