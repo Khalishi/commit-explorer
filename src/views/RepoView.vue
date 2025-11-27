@@ -7,6 +7,7 @@ import TextInput from '../components/TextInput.vue'
 import RepositoryItem from '../components/RepositoryItem.vue'
 import CommitHistory from '../components/CommitHistory.vue'
 import CommitDetails from '../components/CommitDetails.vue'
+import UserProfileCard from '../components/UserProfileCard.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -163,23 +164,7 @@ onUnmounted(() => {
         <!-- Left Panel: User Profile & Repositories -->
         <div class="w-80 bg-white border-r border-gray-200 flex flex-col overflow-hidden">
           <!-- User Profile Card -->
-          <div class="p-6 border-b border-gray-200">
-            <div class="flex items-center gap-4 mb-4">
-              <img 
-                :src="user.avatar_url" 
-                :alt="user.login"
-                class="w-16 h-16 rounded-full"
-              />
-              <div>
-                <h2 class="text-lg font-semibold text-gray-900">{{ user.name || user.login }}</h2>
-                <p class="text-sm text-gray-500">@{{ user.login }}</p>
-              </div>
-            </div>
-            <div class="flex gap-4 text-sm text-gray-600">
-              <span>{{ user.followers }} followers</span>
-              <span>{{ user.public_repos }} repos</span>
-            </div>
-          </div>
+          <UserProfileCard :user="user" variant="desktop" />
 
           <!-- Search Bar -->
           <div class="p-4 border-b border-gray-200">
@@ -239,23 +224,7 @@ onUnmounted(() => {
         <!-- Repositories View -->
         <div v-if="mobileView === 'repos'" class="h-full bg-white flex flex-col overflow-hidden">
           <!-- User Profile Card -->
-          <div class="p-4 border-b border-gray-200">
-            <div class="flex items-center gap-3 mb-3">
-              <img 
-                :src="user.avatar_url" 
-                :alt="user.login"
-                class="w-12 h-12 rounded-full"
-              />
-              <div>
-                <h2 class="text-base font-semibold text-gray-900">{{ user.name || user.login }}</h2>
-                <p class="text-xs text-gray-500">@{{ user.login }}</p>
-              </div>
-            </div>
-            <div class="flex gap-3 text-xs text-gray-600">
-              <span>{{ user.followers }} followers</span>
-              <span>{{ user.public_repos }} repos</span>
-            </div>
-          </div>
+          <UserProfileCard :user="user" variant="mobile" />
 
           <!-- Search Bar -->
           <div class="p-3 border-b border-gray-200">
