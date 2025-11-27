@@ -2,12 +2,13 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { githubApi } from '../services/githubApi'
-import type { GitHubUser, GitHubRepository, GitHubCommit, GitHubCommitDetail } from '../types/github'
+import type { GitHubUser, GitHubRepository, GitHubCommit, GitHubCommitDetail, FavoriteCommit } from '../types/github'
 import TextInput from '../components/TextInput.vue'
 import RepositoryItem from '../components/RepositoryItem.vue'
 import CommitHistory from '../components/CommitHistory.vue'
 import CommitDetails from '../components/CommitDetails.vue'
 import UserProfileCard from '../components/UserProfileCard.vue'
+import { useFavorites } from '../composables/useFavorites'
 
 const route = useRoute()
 const router = useRouter()
@@ -25,6 +26,7 @@ const loadingCommitDetails = ref<boolean>(false)
 const error = ref<string | null>(null)
 const mobileView = ref<'repos' | 'commits' | 'details'>('repos')
 const isDesktop = ref<boolean>(typeof window !== 'undefined' ? window.innerWidth >= 1024 : false)
+const { isFavorite, toggleFavorite } = useFavorites()
 
 // Computed
 const filteredRepos = computed(() => {
@@ -69,6 +71,49 @@ const handleCommitsLoaded = (loadedCommits: GitHubCommit[]) => {
   if (isDesktop.value && commits.value.length > 0 && commits.value[0]) {
     selectCommit(commits.value[0].sha)
   }
+}
+
+const buildFavoriteCommitPayload = (sha: string): FavoriteCommit | null => {
+  if (!selectedRepo.value) return null
+  const matchingCommit =
+    commits.value.find(commit => commit.sha === sha) ||
+    (selectedCommit.value && selectedCommit.value.sha === sha ? selectedCommit.value : null)
+
+  if (!matchingCommit) return null
+
+  const commitMessageLine = matchingCommit.commit.message.split('\n')[0] ?? ''
+  const commitMessage = commitMessageLine.trim() || 'Untitled commit'
+  const commitAuthor = matchingCommit.commit.author || matchingCommit.commit.committer
+  const commitDate = commitAuthor?.date || matchingCommit.commit.committer?.date || new Date().toISOString()
+  const authorName = commitAuthor?.name || matchingCommit.commit.committer?.name || 'Unknown author'
+
+  return {
+    sha: matchingCommit.sha,
+    username: username.value,
+    repositoryName: selectedRepo.value.name,
+    message: commitMessage,
+    date: commitDate,
+    authorName,
+    authorAvatar: matchingCommit.author?.avatar_url || undefined,
+    html_url: matchingCommit.html_url
+  }
+}
+
+const handleToggleFavorite = (sha: string) => {
+  if (isFavorite(sha)) {
+    toggleFavorite(sha)
+    return
+  }
+
+  const payload = buildFavoriteCommitPayload(sha)
+  if (payload) {
+    toggleFavorite(sha, payload)
+  }
+}
+
+const handleToggleFavoriteFromDetails = () => {
+  if (!selectedCommit.value) return
+  handleToggleFavorite(selectedCommit.value.sha)
 }
 
 const selectCommit = async (sha: string) => {
@@ -207,14 +252,18 @@ onUnmounted(() => {
           :username="username"
           :repository-name="selectedRepo?.name || null"
           :selected-commit-sha="selectedCommit?.sha || null"
+          :is-favorite="isFavorite"
           @commit-selected="selectCommit"
           @commits-loaded="handleCommitsLoaded"
+          @toggle-favorite="handleToggleFavorite"
         />
 
         <!-- Right Panel: Commit Details -->
         <CommitDetails
           :selected-commit="selectedCommit"
           :loading-commit-details="loadingCommitDetails"
+          :is-favorite="selectedCommit ? isFavorite(selectedCommit.sha) : false"
+          @toggle-favorite="handleToggleFavoriteFromDetails"
           @go-back="goBack"
         />
       </div>
@@ -268,8 +317,10 @@ onUnmounted(() => {
             :username="username"
             :repository-name="selectedRepo?.name || null"
             :selected-commit-sha="selectedCommit?.sha || null"
+            :is-favorite="isFavorite"
             @commit-selected="selectCommit"
             @commits-loaded="handleCommitsLoaded"
+            @toggle-favorite="handleToggleFavorite"
             @go-back="goBackToRepos"
           />
         </div>
@@ -279,6 +330,8 @@ onUnmounted(() => {
           <CommitDetails
             :selected-commit="selectedCommit"
             :loading-commit-details="loadingCommitDetails"
+            :is-favorite="selectedCommit ? isFavorite(selectedCommit.sha) : false"
+            @toggle-favorite="handleToggleFavoriteFromDetails"
             @go-back="goBackToCommits"
           />
         </div>
